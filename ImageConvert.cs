@@ -32,7 +32,6 @@ namespace SCOI_3
             var Size = bmpData.Stride * bmpData.Height;
             System.Runtime.InteropServices.Marshal.Copy(pixels, 0, ptr, Size);
             res.UnlockBits(bmpData);
-            res = res.ChangeFormat(System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             return res;
         }
 

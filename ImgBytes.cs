@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Drawing;
-using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 using PixelFormat = System.Windows.Media.PixelFormat;
 
@@ -46,7 +45,6 @@ namespace SCOI_3
             _bitsPerPixel = PixelFormat.BitsPerPixel;
             if (DisposeThisBitmap)
                 Source.Dispose();
-
         }
 
         public ImgBytes(BitmapSource Source)
@@ -74,6 +72,8 @@ namespace SCOI_3
 
     public class ImgBinary : ImgBytes
     {
+        byte[] bytesOriginal;
+
         ulong[] _integralMatrix;
         ulong[] _integralMatrixSqr;
 
@@ -106,11 +106,13 @@ namespace SCOI_3
 
         public ImgBinary(Bitmap source, bool DisposeThisBitmap = true) : base(source, DisposeThisBitmap)
         {
+            bytesOriginal = bytes1.Clone() as byte[];
             BinaryCPP.ToGray(bytes1, bytes1.Length, BitsPerPixel, ref _minPixel);
         }
 
         public ImgBinary(BitmapSource source) : base(source)
         {
+            bytesOriginal = bytes1.Clone() as byte[];
             BinaryCPP.ToGray(bytes1, bytes1.Length, BitsPerPixel, ref _minPixel);
         }
 
@@ -122,19 +124,101 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = bytes1[i + 3];
+                }
             }
 
             BinaryCPP.Gavrilov(bytes1, bClone, bClone.Length, _width, _height, BitsPerPixel);
 
             BinaryOption = BinaryOption.GLobal;
             return bClone.ToBitmapSource(_stride, _width, _height, PixelFormat);
+        }
+
+        public BitmapSource BinaryOtsu2()
+        {
+            int ink = BitsPerPixel / 8;
+            byte[] bClone = new byte[bytes1.Length];
+
+            //Задаем альфа-канал, если он есть
+            if (BitsPerPixel == 32)
+            {
+                for (int i = 0; i < bytes1.Length; i += ink)
+                {
+                    bClone[i + 3] = 255;
+                }
+            }
+
+            double[] gist = new double[256];
+            int size = _width * _height;
+
+            for (int i = 0; i < bClone.Length; i += ink)
+            {
+                gist[bytes1[i]] += 1;
+            }
+
+            for (int i = 0; i < 256; i++)
+            {
+                gist[i] /= size;
+            }
+
+            double o_max = -1;
+            double t = 0;
+            double uT = SumMult(gist, 256);
+
+            for (int i = 0; i < 256; i++)
+            {
+                double w1 = Sum(gist, i);
+                double w2 = 1 - w1;
+                double u1 = SumMult(gist, i) / w1;
+                double u2 = (uT - u1 * w1) / w2;
+                double o = w1 * w2 * Math.Pow((u1 - u2), 2);
+                if (o > o_max)
+                {
+                    o_max = o;
+                    t = i;
+                }
+            }
+
+            for (int i = 0; i < bClone.Length; i += ink)
+            {
+                if (bytes1[i] <= t)
+                {
+                    bClone[i] = 0;
+                    bClone[i + 1] = 0;
+                    bClone[i + 2] = 0;
+                }
+                else
+                {
+                    bClone[i] = 255;
+                    bClone[i + 1] = 255;
+                    bClone[i + 2] = 255;
+                }
+            }
+
+            BinaryOption = BinaryOption.Otsu;
+            return bClone.ToBitmapSource(_stride, _width, _height, PixelFormat);
+        }
+
+        public static double Sum(double[] arr, int finallyIndex = 255)
+        {
+            double res = 0;
+            for (int i = 0; i < finallyIndex; i++)
+            {
+                res += arr[i];
+            }
+            return res;
+        }
+
+        public static double SumMult(double[] arr, int finallyIndex = 255)
+        {
+            double res = 0;
+            for (int i = 0; i < finallyIndex; i++)
+            {
+                res += arr[i] * i;
+            }
+            return res;
         }
 
         public BitmapSource BinaryOtsu()
@@ -145,13 +229,10 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = 255;
+                }
             }
 
             BinaryCPP.Otsu(bytes1, bClone, bClone.Length, _width, _height, BitsPerPixel);
@@ -189,13 +270,10 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = 255;
+                }
             }
 
             BinaryCPP.Niblek(bytes1, bClone, bytes1.Length, _integralMatrix, _integralMatrixSqr, _width, _height, BitsPerPixel, a, k);
@@ -237,13 +315,10 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = 255;
+                }
             }
 
             BinaryCPP.Sauvola(bytes1, bClone, bClone.Length, _integralMatrix, _integralMatrixSqr, _width, _height, BitsPerPixel, a, k);
@@ -285,13 +360,10 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = 255;
+                }
             }
 
             BinaryCPP.KristianWolf(bytes1, bClone, bClone.Length, _integralMatrix, _integralMatrixSqr, _width, _height, BitsPerPixel, a, k, _minPixel);
@@ -319,13 +391,10 @@ namespace SCOI_3
             //Задаем альфа-канал, если он есть
             if (BitsPerPixel == 32)
             {
-                Task.Run(() =>
+                for (int i = 0; i < bytes1.Length; i += ink)
                 {
-                    for (int i = 0; i < bytes1.Length; i += ink)
-                    {
-                        bClone[i + 3] = bytes1[i + 3];
-                    }
-                });
+                    bClone[i + 3] = 255;
+                }
             }
 
             BinaryCPP.Bradley(bytes1, bClone, bClone.Length, _integralMatrix, _width, _height, BitsPerPixel, a, k);
@@ -366,7 +435,7 @@ namespace SCOI_3
                 case BinaryOption.GLobal:
                     return BinaryGlobal();
                 case BinaryOption.Otsu:
-                    return BinaryOtsu();
+                    return BinaryOtsu2();
                 case BinaryOption.Niblek:
                     return BinaryNiblek(rect, param);
                 case BinaryOption.Sauvola:
@@ -380,6 +449,123 @@ namespace SCOI_3
             }
         }
 
+        /// <summary>
+        /// Удаление тонких линий и пятен
+        /// Выравнивание текста на картинке по горизонтали
+        /// </summary>
+        /// <returns></returns>
+        public BitmapSource TreshHold(int rectan = 60, double a = 0.2)
+        {
+            BinarySauvola(60, 0.2);
+            int ink = BitsPerPixel / 8;
+
+            if (_integralMatrix == null && _integralMatrixSqr == null)
+            {
+                _integralMatrix = new ulong[_width * _height];
+                _integralMatrixSqr = new ulong[_width * _height];
+                BinaryCPP.CalcIntegralMatrix2(bytes1, _width, _height, BitsPerPixel, _integralMatrix, _integralMatrixSqr);
+            }
+            else
+            {
+                if (_integralMatrix == null)
+                {
+                    _integralMatrix = new ulong[_width * _height];
+                    BinaryCPP.CalcIntegralMatrix(bytes1, _width, _height, BitsPerPixel, _integralMatrix);
+                }
+                if (_integralMatrixSqr == null)
+                {
+                    _integralMatrixSqr = new ulong[_width * _height];
+                    BinaryCPP.CalcIntegralSqrMatrix(bytes1, _width, _height, BitsPerPixel, _integralMatrixSqr);
+                }
+            }
+
+            byte[] bClone = new byte[bytes1.Length];
+
+            //Задаем альфа-канал, если он есть
+            if (BitsPerPixel == 32)
+            {
+                for (int i = 0; i < bytes1.Length; i += ink)
+                {
+                    bClone[i + 3] = 255;
+                }
+            }
+
+            BinaryCPP.Bradley(bytes1, bClone, bClone.Length, _integralMatrix, _width, _height, BitsPerPixel, 198, 0.15);
+
+            BinaryOption = BinaryOption.Sauvola;
+            if (RememberIntegralMatrix == false)
+                DeleteMatrix();
+            if (RememberIntegralSqrMatrix == false)
+                DeleteMatrixSqr();
+
+            int MinPixel = 0;
+            int rect = 7;
+            for (int i = 0; i < bClone.Length; i += ink)
+            {
+                int rowIndex = (i / (BitsPerPixel / 8)) / _width;
+                int colIndex = (i / (BitsPerPixel / 8)) % _width;
+
+                Point LeftUpper = new Point(colIndex - rect / 2, rowIndex - rect / 2);
+                Point RightBot = new Point(colIndex + rect / 2, rowIndex + rect / 2);
+
+                //Производим действие с матрицей
+                int res = 0;
+                int rownow = LeftUpper.Y;
+                int colnow = LeftUpper.X;
+                for (int imatrix = 0; imatrix < rect; imatrix++)
+                {
+                    colnow = LeftUpper.X;
+                    for (int jmatrix = 0; jmatrix < rect; jmatrix++)
+                    {
+                        int rownowtmp = rownow < 0 ? -rownow - 1 : rownow;
+                        int colnowtmp = colnow < 0 ? -colnow - 1 : colnow;
+                        if (rownowtmp >= _height)
+                        {
+                            rownowtmp -= 1 + (rownowtmp - _height);
+                        }
+                        if (colnowtmp >= _width)
+                        {
+                            colnowtmp -= 1 + (colnowtmp - _width);
+                        }
+                        res += bClone[rownowtmp * _width * ink + colnowtmp * ink] / 254;
+                        colnow++;
+                    }
+                    rownow++;
+                }
+                if (res >= 41)
+                {
+                    bClone[i] = 255;
+                    bClone[i + 1] = 255;
+                    bClone[i + 2] = 255;
+                }
+                int rownowtmp2 = rownow < 0 ? -rownow - 1 : rownow;
+                int colnowtmp2 = colnow < 0 ? -colnow - 1 : colnow;
+                if (rownowtmp2 >= _height)
+                {
+                    rownowtmp2 -= 1 + (rownowtmp2 - _height);
+                }
+                if (colnowtmp2 >= _width)
+                {
+                    colnowtmp2 -= 1 + (colnowtmp2 - _width);
+                }
+                if (bClone[rownowtmp2 * _width * ink + colnowtmp2 * ink] / 254 == 0 && rownowtmp2 > MinPixel)
+                {
+                    MinPixel = rownowtmp2;
+                }
+            }
+
+            for(int i = 0; i < bClone.Length; i += ink)
+            {
+                if(bClone[i] == 0)
+                {
+                    bClone[i] = bytesOriginal[i];
+                    bClone[i + 1] = bytesOriginal[i + 1];
+                    bClone[i + 2] = bytesOriginal[i + 2];
+                }
+            }
+
+            return bClone.ToBitmapSource(_stride, _width, _height, PixelFormat);
+        }
 
         private int SumIntegralMatrix(int[][] matrix, int rect, int indexByte, out int C)
         {
@@ -836,113 +1022,6 @@ namespace SCOI_3
                     break;
             }
             BinaryOption = BinaryOption.GLobal;
-            return bClone.ToBitmapSource(Stride, _img.PixelWidth, _img.PixelHeight, _img.Format);
-        }
-
-        public BitmapSource BinaryOtsu()
-        {
-            double[] gist = new double[256];
-            int size = _img.PixelWidth * _img.PixelHeight;
-            byte[] bytes1 = _img.ToByte();
-            switch (_img.Format.BitsPerPixel)
-            {
-                case 32:
-                    for (int i = 0; i < bytes1.Length; i += 4)
-                    {
-                        gist[bytes1[i]] += 1;
-                    }
-                    break;
-                case 24:
-                    for (int i = 0; i < bytes1.Length; i += 3)
-                    {
-                        gist[bytes1[i]] += 1;
-                    }
-                    break;
-                default:
-                    for (int i = 0; i < bytes1.Length; i += 3)
-                    {
-                        gist[bytes1[i]] += 1;
-                    }
-                    break;
-            }
-            for (int i = 0; i < gist.Length; i++)
-            {
-                gist[i] /= size;
-            }
-            double o_max = 0;
-            double t = 0;
-            double uT = gist.SumMult(256);
-            for (int i = 0; i < 256; i++)
-            {
-                double w1 = gist.Sum(i);
-                double w2 = 1 - w1;
-                double u1 = gist.SumMult(i);
-                double u2 = (uT - u1 * w1) / w2;
-                double o = w1 * w2 * (u1 * u1 - 2 * u1 * u2 + u2 * u2);
-                if (o > o_max)
-                {
-                    o_max = o;
-                    t = i;
-                }
-            }
-            byte[] bClone = new byte[bytes1.Length];
-            switch (_img.Format.BitsPerPixel)
-            {
-                case 32:
-                    for (int i = 0; i < bytes1.Length; i += 4)
-                    {
-                        if (bytes1[i] <= t)
-                        {
-                            bClone[i] = 0;
-                            bClone[i + 1] = 0;
-                            bClone[i + 2] = 0;
-                            bClone[i + 3] = bytes1[i + 3];
-                        }
-                        else
-                        {
-                            bClone[i] = 255;
-                            bClone[i + 1] = 255;
-                            bClone[i + 2] = 255;
-                            bClone[i + 3] = bytes1[i + 3];
-                        }
-                    }
-                    break;
-                case 24:
-                    for (int i = 0; i < bytes1.Length; i += 3)
-                    {
-                        if (bytes1[i] <= t)
-                        {
-                            bClone[i] = 0;
-                            bClone[i + 1] = 0;
-                            bClone[i + 2] = 0;
-                        }
-                        else
-                        {
-                            bClone[i] = 255;
-                            bClone[i + 1] = 255;
-                            bClone[i + 2] = 255;
-                        }
-                    }
-                    break;
-                default:
-                    for (int i = 0; i < bytes1.Length; i += 3)
-                    {
-                        if (bytes1[i] <= t)
-                        {
-                            bClone[i] = 0;
-                            bClone[i + 1] = 0;
-                            bClone[i + 2] = 0;
-                        }
-                        else
-                        {
-                            bClone[i] = 255;
-                            bClone[i + 1] = 255;
-                            bClone[i + 2] = 255;
-                        }
-                    }
-                    break;
-            }
-            BinaryOption = BinaryOption.Otsu;
             return bClone.ToBitmapSource(Stride, _img.PixelWidth, _img.PixelHeight, _img.Format);
         }
 

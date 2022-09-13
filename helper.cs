@@ -4,7 +4,7 @@ namespace SCOI_3
 {
     public static class _helper
     {
-        public static double Sum(this double[] arr, int finallyIndex = 255)
+        public static double Sum(double[] arr, int finallyIndex = 255)
         {
             double res = 0;
             for (int i = 0; i < finallyIndex; i++)
@@ -14,7 +14,7 @@ namespace SCOI_3
             return res;
         }
 
-        public static double SumMult(this double[] arr, int finallyIndex = 255)
+        public static double SumMult(double[] arr, int finallyIndex = 255)
         {
             double res = 0;
             for (int i = 0; i < finallyIndex; i++)

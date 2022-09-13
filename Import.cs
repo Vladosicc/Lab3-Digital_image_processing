@@ -29,6 +29,9 @@ namespace SCOI_3
         [DllImport("SCOIDLL.dll", EntryPoint = "Niblek", CallingConvention = CallingConvention.StdCall)]
         static public extern double Niblek(byte[] bytes1, byte[] bClone, int length, ulong[] integralMat, ulong[] integralMatSqr, int width, int height, int BitPerPixel, int a, double k);
 
+        [DllImport("SCOIDLL.dll", EntryPoint = "NiblekMultiThreading", CallingConvention = CallingConvention.StdCall)]
+        static public extern double NiblekMultiThreading(byte[] bytes1, byte[] bClone, int length, ulong[] integralMat, ulong[] integralMatSqr, int width, int height, int BitPerPixel, int a, double k);
+
         [DllImport("SCOIDLL.dll", EntryPoint = "Sauvola", CallingConvention = CallingConvention.StdCall)]
         static public extern double Sauvola(byte[] bytes1, byte[] bClone, int length, ulong[] integralMat, ulong[] integralMatSqr, int width, int height, int BitPerPixel, int a, double k);
 

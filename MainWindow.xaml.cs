@@ -344,6 +344,7 @@ namespace SCOI_3
                 System.GC.WaitForPendingFinalizers();
                 imgBinary = new ImgBinary(Clipboard.GetImage());
                 Picture.Source = imgBinary.BinaryOtsu();
+                UploadNewPicture();
                 WriteLog("Загружено", Brushes.DarkGreen);
             }
             else
@@ -373,6 +374,9 @@ namespace SCOI_3
             Process process = Process.GetCurrentProcess();
             long memoryAmount = process.WorkingSet64;
             WriteLog("Памяти скушано - " + (memoryAmount / (1024 * 1024)).ToString(), Brushes.Purple);
+
+            double param = double.Parse(ValueParam.Text);
+            Picture.Source = imgBinary.TreshHold((int)aRect.Value, param);
         }
 
         private void ClearLog(object sender, RoutedEventArgs e)
@@ -429,8 +433,8 @@ namespace SCOI_3
                 aRect.Maximum = Picture.Source.Width - (Picture.Source.Width % 3);
             else
                 aRect.Maximum = Picture.Source.Height - (Picture.Source.Height % 3);
-            if (aRect.Maximum > 60)
-                aRect.Maximum = 60;
+            //if (aRect.Maximum > 100)
+            //    aRect.Maximum = 100;
         }
 
         private void ResetParam()
@@ -445,7 +449,7 @@ namespace SCOI_3
                     break;
                 case BinaryOption.Sauvola:
                     Param.Value = 0.2;
-                    Param.Minimum = 0.2;
+                    Param.Minimum = -0.5;
                     Param.Maximum = 0.5;
                     Param.TickFrequency = 0.01;
                     break;
